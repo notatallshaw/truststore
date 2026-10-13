@@ -306,6 +306,7 @@ def test_sslcontext_api_success(host):
 
 @successful_hosts
 def test_urllib3_warnings(host):
+    # Record warnings instead of applying the suite's error filter.
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     with urllib3.PoolManager(ssl_context=ctx, retries=5) as http:
         with warnings.catch_warnings(record=True) as w:
