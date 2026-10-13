@@ -3,11 +3,8 @@ import sys
 
 import nox
 
-# Run in the current Python environment on CI
-# (where there's a matrix of jobs using different Pythons)
-# but test multiple versions locally
 PYTHONS = (
-    None if os.environ.get("CI") else ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
+    None if "CI" in os.environ else ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
 )
 
 
@@ -23,15 +20,27 @@ def test(session):
     # PyPy is only used on CI.
     pypy = session.python is None and sys.implementation.name == "pypy"
 
-    session.install("-rdev-requirements.txt", ".")
-    session.run("pip", "freeze")
+    session.run_install(
+        "python",
+        "-m",
+        "pip",
+        "install",
+        "--upgrade",
+        "--only-binary",
+        ":all:",
+        "pip>=26.2.1",
+    )
+    session.run_install("python", "-m", "pip", "install", "-r", "pylock.dev.toml")
+    session.run_install("python", "-m", "pip", "install", "--no-deps", "-e", ".")
+
+    session.run("python", "-m", "pip", "freeze")
     session.run(
         "pytest",
         "-v",
         "-s",
         "-rs",
         "--no-flaky-report",
-        *(("--config-file=pypy-pytest.ini",) if pypy else ()),
+        *(("-W", "ignore::ResourceWarning") if pypy else ()),
         "--max-runs=3",
         *(session.posargs or ("tests/",)),
     )
