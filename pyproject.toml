@@ -41,7 +41,7 @@ deploy = [
 ]
 dev = [
   "aiohttp",
-  # Temporary until the development lock can include PyPy pp80 wheels.
+  # Nab 0.0.19 cannot target different PyPy ABIs by platform.
   "cryptography<50.0.2; implementation_name == 'pypy'",
   "flaky",
   "httpx",
@@ -58,7 +58,9 @@ dev = [
 [tool.nab]
 mode = "universal"
 default-groups = ["dev"]
+# Keep ordinary lock regeneration stable; weekly updates pass --upgrade.
 decision-order = "stable"
+# Give new releases seven days before automated CI adoption.
 uploaded-prior-to = "P7D"
 
 [tool.nab.matrix]
