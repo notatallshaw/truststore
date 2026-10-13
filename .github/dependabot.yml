@@ -14,7 +14,7 @@ updates:
   - package-ecosystem: pre-commit
     directory: "/"
     schedule:
-      interval: quarterly
+      interval: monthly
     groups:
       pre-commit:
         patterns:
