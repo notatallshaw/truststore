@@ -1,5 +1,4 @@
 import os
-import sys
 
 import nox
 
@@ -14,11 +13,6 @@ def test(session):
     session.env["AIOHTTP_NO_EXTENSIONS"] = "1"
     session.env["YARL_NO_EXTENSIONS"] = "1"
     session.env["FROZENLIST_NO_EXTENSIONS"] = "1"
-
-    # This would need to be updated if we added PyPy
-    # to our default Python versions above. Right now
-    # PyPy is only used on CI.
-    pypy = session.python is None and sys.implementation.name == "pypy"
 
     session.run_install(
         "python",
@@ -40,7 +34,6 @@ def test(session):
         "-s",
         "-rs",
         "--no-flaky-report",
-        *(("-W", "ignore::ResourceWarning") if pypy else ()),
         "--max-runs=3",
         *(session.posargs or ("tests/",)),
     )
