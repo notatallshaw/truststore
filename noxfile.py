@@ -24,7 +24,16 @@ def test(session):
         ":all:",
         "pip>=26.2.1",
     )
-    session.run_install("python", "-m", "pip", "install", "-r", "pylock.dev.toml")
+    session.run_install(
+        "python",
+        "-m",
+        "pip",
+        "install",
+        "--only-binary",
+        ":all:",
+        "-r",
+        "pylock.dev.toml",
+    )
     session.run_install("python", "-m", "pip", "install", "--no-deps", "-e", ".")
 
     session.run("python", "-m", "pip", "freeze")

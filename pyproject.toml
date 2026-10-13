@@ -41,8 +41,6 @@ deploy = [
 ]
 dev = [
   "aiohttp",
-  # Nab 0.0.19 cannot target different PyPy ABIs by platform.
-  "cryptography<50.0.2; implementation_name == 'pypy'",
   "flaky",
   "httpx",
   "nox",
@@ -62,6 +60,8 @@ default-groups = ["dev"]
 decision-order = "stable"
 # Give new releases seven days before automated CI adoption.
 uploaded-prior-to = "P7D"
+# CI does not build third-party packages from source.
+dist-policy = "wheel-only"
 
 [tool.nab.matrix]
 python = ">=3.10,<3.16"
@@ -71,6 +71,15 @@ platforms = [
   "windows_amd64",
 ]
 implementations = ["cpython", "pypy"]
+
+# PyPy 3.11 uses pp73 on Linux and pp80 on macOS and Windows.
+[tool.nab.matrix.overrides.implementations.pypy]
+python = "==3.11"
+platforms = [
+  {id = "linux_x86_64", pypy-abi = "pp73"},
+  {id = "macos_arm64", runs-on-macos = "14.0", pypy-abi = "pp80"},
+  {id = "windows_amd64", pypy-abi = "pp80"},
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "strict"

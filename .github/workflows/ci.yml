@@ -47,13 +47,13 @@ jobs:
             python: {key: "3.13-min", version: "3.13.0"}
           - os: ubuntu-latest
             python: {key: "3.14-min", version: "3.14.0"}
-          # Pin 7.3.20 temporarily; current PyPy 3.11 needs pp80 lock support.
+          # Match cryptography's pp73 Linux and pp80 macOS/Windows wheels.
           - os: ubuntu-latest
-            python: "pypy3.11-v7.3.20"
+            python: "pypy3.11-v7.3.23"
           - os: macos-latest
-            python: "pypy3.11-v7.3.20"
+            python: "pypy3.11-v8.0.0"
           - os: windows-latest
-            python: "pypy3.11-v7.3.20"
+            python: "pypy3.11-v8.0.0"
 
     runs-on: ${{ matrix.os }}
     name: ${{ fromJSON('{"macos-latest":"macOS ARM64","windows-latest":"Windows x64","ubuntu-latest":"Ubuntu x64"}')[matrix.os] }} Python ${{ matrix.python.key || matrix.python }}

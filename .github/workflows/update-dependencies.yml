@@ -31,8 +31,8 @@ jobs:
 
       - name: Update lock files
         run: |
-          uvx nab==0.0.19 lock --groups dev --output pylock.dev.toml --upgrade
-          uvx nab==0.0.19 lock \
+          uvx nab==0.0.20 lock --groups dev --output pylock.dev.toml --upgrade
+          uvx nab==0.0.20 lock \
             --project-mode specific \
             --project-default-group deploy \
             --project-dist-policy wheel-only \
