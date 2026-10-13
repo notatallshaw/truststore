@@ -3,8 +3,10 @@ import concurrent.futures
 import contextlib
 import socket
 import ssl
+import sys
 import threading
 import typing
+import warnings
 
 import pytest
 
@@ -28,8 +30,6 @@ def wrap_and_close_sockets(ctx: truststore.SSLContext, host: str, port: int) -> 
                 sock.close()
 
 
-# PyPy reports aiohttp's accepted sockets during this connection stress test.
-@pytest.mark.filterwarnings(r"ignore:unclosed <socket\.socket.*:ResourceWarning")
 @pytest.mark.asyncio
 async def test_threading(server):
     def run_threads():
@@ -46,7 +46,15 @@ async def test_threading(server):
             t.join()
 
     thread = asyncio.to_thread(run_threads)
-    await thread
+    with warnings.catch_warnings():
+        # PyPy reports aiohttp's accepted sockets during this connection stress test.
+        if sys.implementation.name == "pypy":
+            warnings.filterwarnings(
+                "ignore",
+                message=r"unclosed <socket\.socket.*",
+                category=ResourceWarning,
+            )
+        await thread
 
 
 def test_wrap_bio_configures_context_under_lock(monkeypatch):
