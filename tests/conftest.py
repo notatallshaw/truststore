@@ -131,10 +131,18 @@ async def mkcert_certs(mkcert: None) -> typing.AsyncIterator[CertFiles]:
 class Server:
     host: str
     port: int
+    _runner: web.AppRunner
 
     @property
     def base_url(self) -> str:
         return f"https://{self.host}:{self.port}"
+
+    async def wait_for_connections_to_close(self) -> None:
+        """Wait for aiohttp to process peer disconnects."""
+        server = self._runner.server
+        assert server is not None
+        while server.connections:
+            await asyncio.sleep(0)
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -167,7 +175,7 @@ async def server(mkcert_certs: CertFiles) -> typing.AsyncIterator[Server]:
 
     await site.start()
     try:
-        yield Server(host="localhost", port=port)
+        yield Server(host="localhost", port=port, _runner=runner)
     finally:
         await site.stop()
         # Wait for the server to actually close.
@@ -199,7 +207,7 @@ async def invalid_server() -> typing.AsyncIterator[Server]:
 
     await site.start()
     try:
-        yield Server(host="localhost", port=port)
+        yield Server(host="localhost", port=port, _runner=runner)
     finally:
         await site.stop()
         # Wait for the server to actually close.

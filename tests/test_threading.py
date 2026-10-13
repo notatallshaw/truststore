@@ -45,6 +45,9 @@ async def test_threading(server):
 
     thread = asyncio.to_thread(run_threads)
     await thread
+    await asyncio.wait_for(
+        server.wait_for_connections_to_close(), timeout=socket.getdefaulttimeout()
+    )
 
 
 def test_wrap_bio_configures_context_under_lock(monkeypatch):
