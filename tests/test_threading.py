@@ -28,6 +28,8 @@ def wrap_and_close_sockets(ctx: truststore.SSLContext, host: str, port: int) -> 
                 sock.close()
 
 
+# PyPy reports aiohttp's accepted sockets during this connection stress test.
+@pytest.mark.filterwarnings(r"ignore:unclosed <socket\.socket.*:ResourceWarning")
 @pytest.mark.asyncio
 async def test_threading(server):
     def run_threads():
@@ -45,7 +47,6 @@ async def test_threading(server):
 
     thread = asyncio.to_thread(run_threads)
     await thread
-    await server.close()
 
 
 def test_wrap_bio_configures_context_under_lock(monkeypatch):
