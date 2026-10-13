@@ -48,7 +48,7 @@ async def test_threading(server):
 
     pypy = sys.implementation.name == "pypy"
     with warnings.catch_warnings():
-        # PyPy reports aiohttp resources during this connection stress test.
+        # PyPy reports aiohttp resources after the stress server closes.
         if pypy:
             warnings.filterwarnings(
                 "ignore",
@@ -56,8 +56,8 @@ async def test_threading(server):
                 category=ResourceWarning,
             )
         await asyncio.to_thread(run_threads)
+        await server.close()
         if pypy:
-            await server.close()
             gc.collect()
 
 
