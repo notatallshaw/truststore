@@ -4,6 +4,7 @@ import tempfile
 from collections import Counter
 
 import pytest
+import trustme
 import urllib3
 from cryptography.hazmat.primitives.serialization import Encoding
 from OpenSSL.crypto import X509
@@ -11,6 +12,11 @@ from OpenSSL.crypto import X509
 import truststore
 
 results: list[tuple[bool, bool]] = []
+
+
+@pytest.fixture
+def trustme_ca():
+    return trustme.CA()
 
 
 @pytest.fixture(scope="module", autouse=True)
