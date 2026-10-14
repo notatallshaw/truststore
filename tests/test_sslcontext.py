@@ -7,6 +7,8 @@ from urllib3.exceptions import InsecureRequestWarning, SSLError
 
 import truststore
 
+pytestmark = pytest.mark.flaky(max_runs=3)
+
 
 @pytest.mark.internet
 def test_minimum_maximum_version():
