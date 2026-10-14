@@ -15,9 +15,6 @@ jobs:
         include:
           - os: macos-latest
             name: macOS
-            python: "3.14"
-          - os: macos-latest
-            name: macOS
             python: "pypy3.11-v8.0.0"
           - os: windows-latest
             name: Windows
