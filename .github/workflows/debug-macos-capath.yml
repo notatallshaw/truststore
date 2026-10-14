@@ -1,0 +1,31 @@
+name: Debug macOS capath
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capath:
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.14", "pypy3.11-v8.0.0"]
+    runs-on: macos-latest
+    name: macOS Python ${{ matrix.python }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Run capath diagnostic
+        run: |
+          python -m pip install --upgrade --only-binary :all: 'pip>=26.2.1'
+          python -m pip install -r dev-requirements.txt
+          python -m pip install --no-deps -e .
+          python -m pytest -q -s tests/test_macos_capath_diagnostic.py
