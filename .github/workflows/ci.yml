@@ -19,6 +19,7 @@ env:
 
 jobs:
   lint:
+    if: github.head_ref != 'debug/macos-capath'
     runs-on: ubuntu-latest
     name: "Lint"
     steps:
@@ -30,6 +31,7 @@ jobs:
           python-version: "3.x"
       - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
   test:
+    if: github.head_ref != 'debug/macos-capath'
     strategy:
       fail-fast: false
       matrix:
@@ -97,6 +99,7 @@ jobs:
           python -m nox -s test
 
   integration-pip:
+    if: github.head_ref != 'debug/macos-capath'
     runs-on: ubuntu-latest
     name: Integration pip
     timeout-minutes: 10
