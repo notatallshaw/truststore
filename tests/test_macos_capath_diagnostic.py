@@ -1,4 +1,5 @@
 import os
+import platform
 import ssl
 import tempfile
 from collections import Counter
@@ -25,7 +26,7 @@ def report_results():
 
 @pytest.mark.parametrize("attempt", range(50))
 def test_capath_anchor_visibility(attempt, trustme_ca, httpserver):
-    import truststore._macos
+    import truststore
 
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ca_der = trustme_ca._certificate.public_bytes(Encoding.DER)
@@ -43,8 +44,13 @@ def test_capath_anchor_visibility(attempt, trustme_ca, httpserver):
         httpserver.expect_request("/", method="GET").respond_with_json({})
         request_succeeded = False
         error = None
-        modern_api = truststore._macos._is_macos_version_10_14_or_later
-        truststore._macos._is_macos_version_10_14_or_later = False
+        macos = None
+        modern_api = None
+        if platform.system() == "Darwin":
+            import truststore._macos as macos
+
+            modern_api = macos._is_macos_version_10_14_or_later
+            macos._is_macos_version_10_14_or_later = False
         try:
             with urllib3.PoolManager(ssl_context=ctx, retries=False) as http:
                 http.request("GET", httpserver.url_for("/"))
@@ -52,7 +58,8 @@ def test_capath_anchor_visibility(attempt, trustme_ca, httpserver):
         except urllib3.exceptions.HTTPError as exc:
             error = repr(exc)
         finally:
-            truststore._macos._is_macos_version_10_14_or_later = modern_api
+            if macos is not None:
+                macos._is_macos_version_10_14_or_later = modern_api
 
         ca_visible_after = ca_der in ctx._ctx.get_ca_certs(binary_form=True)
 

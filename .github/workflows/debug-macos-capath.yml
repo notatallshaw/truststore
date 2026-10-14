@@ -1,4 +1,4 @@
-name: Debug macOS capath
+name: Debug capath
 
 on:
   pull_request:
@@ -12,9 +12,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.14", "pypy3.11-v8.0.0"]
-    runs-on: macos-latest
-    name: macOS Python ${{ matrix.python }}
+        include:
+          - os: macos-latest
+            name: macOS
+            python: "3.14"
+          - os: macos-latest
+            name: macOS
+            python: "pypy3.11-v8.0.0"
+          - os: windows-latest
+            name: Windows
+            python: "3.11"
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.name }} Python ${{ matrix.python }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
