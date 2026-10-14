@@ -9,9 +9,7 @@ import urllib3
 from cryptography.hazmat.primitives.serialization import Encoding
 from OpenSSL.crypto import X509
 
-import truststore
-
-results: list[tuple[bool, bool]] = []
+results: list[tuple[bool, bool, bool]] = []
 
 
 @pytest.fixture
@@ -25,8 +23,10 @@ def report_results():
     print(f"capath diagnostic summary: {Counter(results)}", flush=True)
 
 
-@pytest.mark.parametrize("attempt", range(20))
+@pytest.mark.parametrize("attempt", range(50))
 def test_capath_anchor_visibility(attempt, trustme_ca, httpserver):
+    import truststore._macos
+
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ca_der = trustme_ca._certificate.public_bytes(Encoding.DER)
 
@@ -38,21 +38,28 @@ def test_capath_anchor_visibility(attempt, trustme_ca, httpserver):
         os.symlink(cert_path, f"{capath}/{cert_hash:x}.0")
 
         ctx.load_verify_locations(capath=capath)
-        ca_visible = ca_der in ctx._ctx.get_ca_certs(binary_form=True)
+        ca_visible_before = ca_der in ctx._ctx.get_ca_certs(binary_form=True)
 
         httpserver.expect_request("/", method="GET").respond_with_json({})
         request_succeeded = False
         error = None
+        modern_api = truststore._macos._is_macos_version_10_14_or_later
+        truststore._macos._is_macos_version_10_14_or_later = False
         try:
             with urllib3.PoolManager(ssl_context=ctx, retries=False) as http:
                 http.request("GET", httpserver.url_for("/"))
             request_succeeded = True
         except urllib3.exceptions.HTTPError as exc:
             error = repr(exc)
+        finally:
+            truststore._macos._is_macos_version_10_14_or_later = modern_api
 
-    results.append((ca_visible, request_succeeded))
+        ca_visible_after = ca_der in ctx._ctx.get_ca_certs(binary_form=True)
+
+    results.append((ca_visible_before, ca_visible_after, request_succeeded))
     print(
-        f"attempt={attempt} ca_visible={ca_visible} "
+        f"attempt={attempt} ca_visible_before={ca_visible_before} "
+        f"ca_visible_after={ca_visible_after} "
         f"request_succeeded={request_succeeded} error={error}",
         flush=True,
     )
