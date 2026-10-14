@@ -33,8 +33,15 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - name: Run capath diagnostic
+        shell: bash
         run: |
           python -m pip install --upgrade --only-binary :all: 'pip>=26.2.1'
           python -m pip install -r dev-requirements.txt
           python -m pip install --no-deps -e .
-          python -m pytest -q -s tests/test_macos_capath_diagnostic.py
+          failures=0
+          for attempt in {1..10}; do
+            echo "test_api.py diagnostic attempt=$attempt"
+            python -m pytest -q -s --max-runs=1 tests/test_api.py || failures=$((failures + 1))
+          done
+          echo "test_api.py diagnostic failures=$failures"
+          test "$failures" -eq 0

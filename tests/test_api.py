@@ -445,9 +445,11 @@ def test_trustme_cert(trustme_ca, httpserver):
     indirect=True,
 )
 def test_trustme_cert_loaded_via_capath(trustme_ca, httpserver):
+    from cryptography.hazmat.primitives.serialization import Encoding
     from OpenSSL.crypto import X509
 
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ca_der = trustme_ca._certificate.public_bytes(Encoding.DER)
     with tempfile.TemporaryDirectory() as capath:
         with open(f"{capath}/cert.pem", "wb") as certfile:
             certfile.write(trustme_ca.cert_pem.bytes())
@@ -457,11 +459,23 @@ def test_trustme_cert_loaded_via_capath(trustme_ca, httpserver):
         assert set(os.listdir(capath)) == {"cert.pem", cert_filename}
 
         ctx.load_verify_locations(capath=capath)
+        print(
+            "capath diagnostic before request: "
+            f"ca_visible={ca_der in ctx._ctx.get_ca_certs(binary_form=True)}",
+            flush=True,
+        )
 
         httpserver.expect_request("/", method="GET").respond_with_json({})
 
-        with urllib3.PoolManager(ssl_context=ctx) as http:
-            resp = http.request("GET", httpserver.url_for("/"))
+        try:
+            with urllib3.PoolManager(ssl_context=ctx) as http:
+                resp = http.request("GET", httpserver.url_for("/"))
+        finally:
+            print(
+                "capath diagnostic after request: "
+                f"ca_visible={ca_der in ctx._ctx.get_ca_certs(binary_form=True)}",
+                flush=True,
+            )
         assert resp.status == 200
         assert len(resp.data) > 0
 
