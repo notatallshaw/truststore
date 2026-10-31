@@ -30,7 +30,7 @@ if _sys.version_info < (3, 13) and _sys.implementation.name not in ("cpython", "
 
 from ._api import SSLContext, extract_from_ssl, inject_into_ssl
 
-del _api, _sys  # type: ignore[name-defined] # noqa: F821
+del _sys
 
 __all__ = ["SSLContext", "extract_from_ssl", "inject_into_ssl"]
 __version__ = "0.10.5"
