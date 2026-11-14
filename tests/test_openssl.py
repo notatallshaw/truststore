@@ -1,3 +1,4 @@
+import os
 import ssl
 import sys
 from pathlib import Path
@@ -72,6 +73,14 @@ def test_valid_hash_directory_keeps_its_ca_roots(
     httpserver: HTTPServer,
 ) -> None:
     _ca_paths(tmp_path, monkeypatch, trustme_ca, "0", trustme.CA())
+    (certificate_file,) = (tmp_path / "certs").iterdir()
+    original = os.path.isfile
+
+    def isfile(path: str) -> bool:
+        assert Path(path) != certificate_file
+        return original(path)
+
+    monkeypatch.setattr(os.path, "isfile", isfile)
     _request(httpserver)
 
 
@@ -83,4 +92,48 @@ def test_existing_ca_file_works_with_newline_hash_name(
 ) -> None:
     ca_file = _ca_paths(tmp_path, monkeypatch, trustme_ca, "0\n", trustme_ca)
     monkeypatch.setenv("SSL_CERT_FILE", str(ca_file))
+    _request(httpserver)
+
+
+@pytest.mark.parametrize(
+    "trustme_ca",
+    [
+        {
+            "organization_name": "truststore capath 15",
+            "organization_unit_name": "unit 15",
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.parametrize(
+    "layout", ["uppercase", "lowercase-alias", "casefold-lookup", "valid-cafile"]
+)
+def test_uppercase_hash_entry_uses_actual_lowercase_lookup(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    trustme_ca: trustme.CA,
+    httpserver: HTTPServer,
+    layout: str,
+) -> None:
+    fallback = trustme_ca if layout in ("uppercase", "valid-cafile") else trustme.CA()
+    fallback_file = _ca_paths(tmp_path, monkeypatch, trustme_ca, "0", fallback)
+    directory = tmp_path / "certs"
+    (lowercase,) = directory.iterdir()
+    uppercase = lowercase.with_name(lowercase.name.upper())
+    assert uppercase.name != lowercase.name
+    lowercase.rename(uppercase)
+
+    if layout in ("lowercase-alias", "casefold-lookup") and not lowercase.is_file():
+        lowercase.hardlink_to(uppercase)
+    if layout == "casefold-lookup":
+        original = os.listdir
+
+        def entries(path: str) -> list[str]:
+            # Model a case-insensitive listing; the lowercase alias and TLS are real.
+            return [uppercase.name] if Path(path) == directory else original(path)
+
+        monkeypatch.setattr(os, "listdir", entries)
+    if layout == "valid-cafile":
+        monkeypatch.setenv("SSL_CERT_FILE", str(fallback_file))
+
     _request(httpserver)
