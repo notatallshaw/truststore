@@ -81,7 +81,16 @@ def _capath_contains_certs(capath: str) -> bool:
     if not os.path.isdir(capath):
         return False
     # '$' also matches before a filename's terminal newline.
-    return any(_HASHED_CERT_FILENAME_RE.fullmatch(name) for name in os.listdir(capath))
+    for name in os.listdir(capath):
+        if not _HASHED_CERT_FILENAME_RE.fullmatch(name):
+            continue
+        lowercase_name = name.lower()
+        # Preserve case-insensitive paths and lowercase aliases.
+        if name == lowercase_name or os.path.isfile(
+            os.path.join(capath, lowercase_name)
+        ):
+            return True
+    return False
 
 
 def _verify_peercerts_impl(
