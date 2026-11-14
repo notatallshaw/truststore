@@ -3,7 +3,7 @@ import logging
 import pathlib
 import ssl
 import typing
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from tempfile import TemporaryDirectory
 
 import pytest
@@ -177,16 +177,45 @@ class Server:
     port: int
     _runner: web.AppRunner
     _closed: bool = False
+    _transports: set[asyncio.Transport] = field(default_factory=set)
 
     @property
     def base_url(self) -> str:
         return f"https://{self.host}:{self.port}"
 
+    async def _remember_transport(
+        self, request: web.Request, _response: web.StreamResponse
+    ) -> None:
+        """Retain TLS transports before aiohttp clears the handler reference."""
+        if request.transport is not None:
+            self._transports.add(request.transport)
+
     async def close(self) -> None:
         """Close the aiohttp runner and its active connections."""
-        if not self._closed:
+        if self._closed:
+            return
+
+        manager = self._runner.server
+        if manager is not None:
+            for connection in manager.connections:
+                if connection.transport is not None:
+                    self._transports.add(connection.transport)
+
+        try:
             await self._runner.cleanup()
-            self._closed = True
+        finally:
+            for transport in self._transports:
+                transport.abort()
+
+            if self._transports:
+                # abort() queues connection_lost; finish those callbacks first.
+                loop = asyncio.get_running_loop()
+                completed = asyncio.Future[None]()
+                loop.call_soon(completed.set_result, None)
+                await asyncio.shield(completed)
+
+            self._transports.clear()
+        self._closed = True
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -213,12 +242,13 @@ async def server(mkcert_certs: CertFiles) -> typing.AsyncIterator[Server]:
     # we need keepalive_timeout=0
     # see https://github.com/aio-libs/aiohttp/issues/5426
     runner = web.AppRunner(app, keepalive_timeout=0)
-    await runner.setup()
     port = 9999  # Arbitrary choice.
+    test_server = Server(host="localhost", port=port, _runner=runner)
+    app.on_response_prepare.append(test_server._remember_transport)
+    await runner.setup()
     site = web.TCPSite(runner, ssl_context=ctx, port=port)
 
     await site.start()
-    test_server = Server(host="localhost", port=port, _runner=runner)
     try:
         yield test_server
     finally:
@@ -243,12 +273,13 @@ async def invalid_server() -> typing.AsyncIterator[Server]:
     # we need keepalive_timeout=0
     # see https://github.com/aio-libs/aiohttp/issues/5426
     runner = web.AppRunner(app, keepalive_timeout=0)
-    await runner.setup()
     port = 9999  # Arbitrary choice.
+    test_server = Server(host="localhost", port=port, _runner=runner)
+    app.on_response_prepare.append(test_server._remember_transport)
+    await runner.setup()
     site = web.TCPSite(runner, ssl_context=ctx, port=port)
 
     await site.start()
-    test_server = Server(host="localhost", port=port, _runner=runner)
     try:
         yield test_server
     finally:
