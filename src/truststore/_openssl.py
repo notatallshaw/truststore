@@ -80,7 +80,8 @@ def _capath_contains_certs(capath: str) -> bool:
     """Check whether capath exists and contains certs in the expected format."""
     if not os.path.isdir(capath):
         return False
-    return any(_HASHED_CERT_FILENAME_RE.match(name) for name in os.listdir(capath))
+    # '$' also matches before a filename's terminal newline.
+    return any(_HASHED_CERT_FILENAME_RE.fullmatch(name) for name in os.listdir(capath))
 
 
 def _verify_peercerts_impl(
